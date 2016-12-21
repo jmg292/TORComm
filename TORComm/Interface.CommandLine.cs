@@ -142,7 +142,7 @@ namespace TORComm.Interface.CommandLine
                 Console.WriteLine("[+] Directory authorities: {0}", TORComm.Active.RouterStorage.DirectoryAuthorityIndex.Count);
                 Console.WriteLine("[+] Hidden service directories: {0}", TORComm.Active.RouterStorage.HiddenServiceDirectoryIndex.Count);
                 Console.WriteLine("[+] Attempting to establish intro circuit.");
-                TORComm.Active.CommandInterface.CircuitHandler.EstablishIntroCircuit();
+                TORComm.Active.CommandInterface.CircuitHandler.GetCurrentCircuitStatus();
             }
         }
 

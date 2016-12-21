@@ -345,13 +345,16 @@ namespace TORComm.Network.ControlProtocol
                     TempStorage.AddRange(ResultData.Split(new String[] { "\r\n", "\n" }, StringSplitOptions.None).Skip(1).ToArray());
                     TempStorage.RemoveRange(TempStorage.Count - 2, 2);
                     router = this.NewRouterFromArray((String[])TempStorage.ToArray(typeof(string)));
-                    Console.WriteLine("\t+ New object created, validating status flags.");
-                    if (router.IsRunning && router.IsStable && router.IsValid)
+                    if (router != null)
                     {
-                        Console.WriteLine("\t+ Processing router: {0}", router.nickname);
-                        this.ProcessAndSortRouter(router);
-                        OperationSuccess = this.SetCountryForNode(router.identity, router.address);
-                        Console.WriteLine("\t+ Router location: {0}", TORComm.Active.RouterStorage.SlowRouters[router.identity].CountryCode);
+                        Console.WriteLine("\t+ New object created, validating status flags.");
+                        if (router.IsRunning && router.IsStable && router.IsValid)
+                        {
+                            Console.WriteLine("\t+ Processing router: {0}", router.nickname);
+                            this.ProcessAndSortRouter(router);
+                            OperationSuccess = this.SetCountryForNode(router.identity, router.address);
+                            Console.WriteLine("\t+ Router location: {0}", TORComm.Active.RouterStorage.SlowRouters[router.identity].CountryCode);
+                        }
                     }
                 }
             }
@@ -392,29 +395,151 @@ namespace TORComm.Network.ControlProtocol
             return (TORComm.Components.Network.RouterObject[])ReturnValue.ToArray(typeof(TORComm.Components.Network.RouterObject));
         }
 
-        public bool EstablishIntroCircuit()
+        private TORComm.Components.Network.CircuitObject GetCircuitFromString(String CircuitInfo)
         {
-            bool OperationSuccessful = false;
-            TORComm.Components.Network.CircuitObject circuit = new Components.Network.CircuitObject();
-            circuit.Routers = this.GetSlowRouterGroup();
-            String ExtensionPath = String.Empty;
-            if (circuit.Routers != null)
+            String[] CircuitInfoArray = CircuitInfo.Split(' ');
+            TORComm.Components.Network.CircuitObject NewCircuit = new Components.Network.CircuitObject();
+            NewCircuit.identity = CircuitInfoArray[0];
+            switch(CircuitInfoArray[1])
             {
-                foreach (TORComm.Components.Network.RouterObject router in circuit.Routers)
+                case "LAUNCHED":
+                    NewCircuit.Status = Components.Network.CircuitStatus.LAUNCHED;
+                    break;
+
+                case "BUILT":
+                    NewCircuit.Status = Components.Network.CircuitStatus.BUILT;
+                    break;
+
+                case "EXTENDED":
+                    NewCircuit.Status = Components.Network.CircuitStatus.EXTENDED;
+                    break;
+
+                case "FAILED":
+                    NewCircuit.Status = Components.Network.CircuitStatus.FAILED;
+                    break;
+
+                case "CLOSED":
+                    NewCircuit.Status = Components.Network.CircuitStatus.CLOSED;
+                    break;
+
+                default:
+                    // If the status isn't one of the above strings, something went horribly wrong.  Return null.
+                    return null;
+            }
+            // Process the remaining line items before identifying the individual routers that compose the circuit
+            for(int i = 3; i < CircuitInfoArray.Count() - 1; i++)
+            {
+                String[] StatusItem = CircuitInfoArray[i].Split('=');
+                if(StatusItem.Count() == 2) // Just in case there are additional items in a format we haven't accounted for
                 {
-                    ExtensionPath += router.nickname + ",";
-                }
-                ExtensionPath = ExtensionPath.Substring(0, ExtensionPath.Length - 1);
-                String ControlResponse = this.ControlPort.SendCommand(String.Format("EXTENDCIRCUIT 0 {0}", ExtensionPath));
-                if (this.ControlPort.ResponseOK(ControlResponse))
-                {
-                    // Retrieve the circuit ID from the response message.
-                    circuit.identity = ControlResponse.Split(' ')[2].Trim();
-                    Console.WriteLine("\n[+] Successfully created circuit with identity: {0}", circuit.identity);
-                    ControlResponse = this.ControlPort.SendCommand("GETINFO circuit-status");
-                    Console.WriteLine(ControlResponse);
+                    switch (StatusItem[0])
+                    {
+                        case "PURPOSE":
+                            switch(StatusItem[1])
+                            {
+                                case "GENERAL":
+                                    NewCircuit.Purpose = Components.Network.CircuitPurpose.GENERAL;
+                                    break;
+
+                                case "HS_CLIENT_INTRO":
+                                    NewCircuit.Purpose = Components.Network.CircuitPurpose.HS_CLIENT_INTRO;
+                                    break;
+
+                                case "HS_CLIENT_REND":
+                                    NewCircuit.Purpose = Components.Network.CircuitPurpose.HS_CLIENT_REND;
+                                    break;
+
+                                case "HS_SERVICE_INTRO":
+                                    NewCircuit.Purpose = Components.Network.CircuitPurpose.HS_SERVICE_INTRO;
+                                    break;
+
+                                case "HS_SERVICE_REND":
+                                    NewCircuit.Purpose = Components.Network.CircuitPurpose.HS_SERVICE_REND;
+                                    break;
+
+                                case "TESTING":
+                                    NewCircuit.Purpose = Components.Network.CircuitPurpose.TESTING;
+                                    break;
+
+                                case "CONTROLLER":
+                                    NewCircuit.Purpose = Components.Network.CircuitPurpose.CONTROLLER;
+                                    break;
+
+                                case "MEASURE_TIMEOUT":
+                                    NewCircuit.Purpose = Components.Network.CircuitPurpose.MEASURE_TIMEOUT;
+                                    break;
+
+                                default:
+                                    NewCircuit.Purpose = Components.Network.CircuitPurpose.UNLISTED_UNKNOWN;
+                                    break;
+                            }
+                            break;
+
+                        case "TIME_CREATED":
+                            NewCircuit.CreationTime = DateTime.ParseExact(StatusItem[1], "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff", System.Globalization.CultureInfo.InvariantCulture);
+                            break;
+
+                        default:
+                            // Skip anything we don't have parsing rules for
+                            continue;
+                    }
                 }
             }
+            ArrayList RouterList = new ArrayList();
+            // Time to retrieve the stored object representing each router in the circuit
+            foreach (String RouterInfo in CircuitInfoArray[2].Split(','))
+            {
+                TORComm.Components.Network.RouterObject router = TORComm.Network.RouterManagement.GetRouterByName(RouterInfo.Split('~')[1]);
+                if(router != null)
+                {
+                    // Make sure we have the country code info for each router
+                    if (String.IsNullOrEmpty(router.CountryCode))
+                    {
+                        this.ControlPort.StatusHandler.SetCountryForNode(router.identity, router.address);
+                        // Since we had to update the stored router object, make sure our copy is up to date
+                        if(router.IsFast)
+                        {
+                            router = TORComm.Active.RouterStorage.FastRouters[router.identity];
+                        }
+                        else
+                        {
+                            router = TORComm.Active.RouterStorage.SlowRouters[router.identity];
+                        }
+                    }
+                    RouterList.Add(router);
+                }
+            }
+            NewCircuit.Routers = (TORComm.Components.Network.RouterObject[])RouterList.ToArray(typeof(TORComm.Components.Network.RouterObject));
+            return NewCircuit;
+        }
+
+        public bool GetCurrentCircuitStatus()
+        {
+            bool OperationSuccessful = false;
+            String ControlResponse = this.ControlPort.SendCommand("GETINFO circuit-status");
+            if (this.ControlPort.ResponseOK(ControlResponse))
+            {
+                ArrayList TempStorage = new ArrayList();
+                TempStorage.AddRange(ControlResponse.Split(new String[] { "\r\n", "\n" }, StringSplitOptions.None).Skip(1).ToArray());
+                TempStorage.RemoveRange(TempStorage.Count - 2, 2);
+                foreach(String CircuitInfo in TempStorage)
+                {
+                    TORComm.Components.Network.CircuitObject circuit = this.GetCircuitFromString(CircuitInfo);
+                    Console.WriteLine("\n[+] Circuit ID: {0}", circuit.identity);
+                    Console.WriteLine("[+] Circuit Status: {0}", circuit.Status);
+                    Console.WriteLine("[+] Circuit Reason: {0}", circuit.Reason);
+                    Console.WriteLine("[+] Circuit Purpose: {0}", circuit.Purpose);
+                    Console.WriteLine("[+] Creation time: {0}", circuit.CreationTime);
+                    Console.WriteLine("[+] Connection details (Routers and Path)");
+                    foreach (TORComm.Components.Network.RouterObject router in circuit.Routers)
+                    {
+                        Console.WriteLine("\t + Name: {0}", router.nickname);
+                        Console.WriteLine("\t + Address: {0}", router.address);
+                        Console.WriteLine("\t + Country: {0}", router.CountryCode);
+                    }
+                }
+            }
+            // TORComm.Components.Network.CircuitObject circuit = new Components.Network.CircuitObject();
             return OperationSuccessful;
         }
 

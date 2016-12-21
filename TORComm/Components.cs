@@ -59,7 +59,7 @@ namespace TORComm.Components
         public enum CircuitStatus
         {
             LAUNCHED = 0,
-            BUILD = 1,
+            BUILT = 1,
             EXTENDED = 2,
             FAILED = 3,
             CLOSED = 4
@@ -199,19 +199,19 @@ namespace TORComm.Components
         public class CircuitObject
         {
             public String identity;
-            public int CreationTime;
             public CircuitStatus Status;
             public CircuitReason Reason;
+            public DateTime CreationTime;
             public CircuitPurpose Purpose;
             public RouterObject[] Routers;
 
             public CircuitObject()
             {
                 this.Routers = null;
-                this.CreationTime = 0;
                 this.identity = String.Empty;
                 this.Reason = CircuitReason.NONE;
                 this.Status = CircuitStatus.CLOSED;
+                this.CreationTime = DateTime.MinValue;
                 this.Purpose = CircuitPurpose.UNLISTED_UNKNOWN;
             }
         }
