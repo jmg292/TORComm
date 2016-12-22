@@ -427,7 +427,7 @@ namespace TORComm.Network.ControlProtocol
                     return null;
             }
             // Process the remaining line items before identifying the individual routers that compose the circuit
-            for(int i = 3; i < CircuitInfoArray.Count() - 1; i++)
+            for(int i = 3; i < CircuitInfoArray.Count(); i++)
             {
                 String[] StatusItem = CircuitInfoArray[i].Split('=');
                 if(StatusItem.Count() == 2) // Just in case there are additional items in a format we haven't accounted for
@@ -476,7 +476,7 @@ namespace TORComm.Network.ControlProtocol
                             break;
 
                         case "TIME_CREATED":
-                            NewCircuit.CreationTime = DateTime.ParseExact(StatusItem[1], "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff", System.Globalization.CultureInfo.InvariantCulture);
+                            NewCircuit.CreationTime = DateTime.Parse(StatusItem[1], System.Globalization.CultureInfo.InvariantCulture);
                             break;
 
                         default:
