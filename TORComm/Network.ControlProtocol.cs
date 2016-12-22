@@ -524,22 +524,14 @@ namespace TORComm.Network.ControlProtocol
                 TempStorage.RemoveRange(TempStorage.Count - 2, 2);
                 foreach(String CircuitInfo in TempStorage)
                 {
+                    bool AdditionSuccessful = false;
                     TORComm.Components.Network.CircuitObject circuit = this.GetCircuitFromString(CircuitInfo);
-                    Console.WriteLine("\n[+] Circuit ID: {0}", circuit.identity);
-                    Console.WriteLine("[+] Circuit Status: {0}", circuit.Status);
-                    Console.WriteLine("[+] Circuit Reason: {0}", circuit.Reason);
-                    Console.WriteLine("[+] Circuit Purpose: {0}", circuit.Purpose);
-                    Console.WriteLine("[+] Creation time: {0}", circuit.CreationTime);
-                    Console.WriteLine("[+] Connection details (Routers and Path)");
-                    foreach (TORComm.Components.Network.RouterObject router in circuit.Routers)
+                    while(!(AdditionSuccessful))
                     {
-                        Console.WriteLine("\t + Name: {0}", router.nickname);
-                        Console.WriteLine("\t + Address: {0}", router.address);
-                        Console.WriteLine("\t + Country: {0}", router.CountryCode);
+                        AdditionSuccessful = TORComm.Active.CircuitStorage.TryAdd(circuit.identity, circuit);
                     }
                 }
             }
-            // TORComm.Components.Network.CircuitObject circuit = new Components.Network.CircuitObject();
             return OperationSuccessful;
         }
 

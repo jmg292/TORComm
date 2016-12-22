@@ -141,8 +141,32 @@ namespace TORComm.Interface.CommandLine
                 Console.WriteLine("[+] Guard node identities: {0}", TORComm.Active.RouterStorage.GuardNodeIndex.Count);
                 Console.WriteLine("[+] Directory authorities: {0}", TORComm.Active.RouterStorage.DirectoryAuthorityIndex.Count);
                 Console.WriteLine("[+] Hidden service directories: {0}", TORComm.Active.RouterStorage.HiddenServiceDirectoryIndex.Count);
-                Console.WriteLine("[+] Attempting to establish intro circuit.");
-                TORComm.Active.CommandInterface.CircuitHandler.GetCurrentCircuitStatus();
+                Console.WriteLine("[+] Retrieving circuit connection information.");
+                if (TORComm.Active.CommandInterface.CircuitHandler.GetCurrentCircuitStatus())
+                {
+                    Console.WriteLine("[+] Successfully loaded information on {0} connected circuits.\n", TORComm.Active.CircuitStorage.Count);
+                }
+                Console.Clear();
+                String ServiceAddress = TORComm.Active.TorProcess.GetHiddenServiceAddress().Split('.')[0];
+                Console.WriteLine("[+] Service address: {0}", ServiceAddress);
+                Console.WriteLine(TORComm.Active.CommandInterface.SendCommand(String.Format("GETINFO hs/service/desc/id/{0}", ServiceAddress)));
+                Console.WriteLine("[+] Press any key to continue . . .");
+                Console.ReadKey();
+            }
+            else if (this.mode == Components.Network.ConnectionMode.CLIENT)
+            {
+                this.StartTORAndWaitForConnection();
+                Console.WriteLine("[+] Establishing control interface connection.");
+                TORComm.Components.TorProcess.DynamicProperties ControlProperties = TORComm.Active.TorProcess.GetSessionProperties();
+                TORComm.Active.CommandInterface.Connect(ControlProperties.ControlPort, ControlProperties.ControlPassword); while (!(TORComm.Active.CommandInterface.ConnectionReady))
+                {
+                    Thread.Sleep(500);
+                }
+                Console.WriteLine("[+] Retrieving circuit connection information.");
+                if(TORComm.Active.CommandInterface.CircuitHandler.GetCurrentCircuitStatus())
+                {
+                    Console.WriteLine("[+] Successfully loaded information on {0} connected circuits.", TORComm.Active.CircuitStorage.Count);
+                }
             }
         }
 
