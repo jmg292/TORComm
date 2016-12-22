@@ -66,6 +66,7 @@
     <Compile Include="Network.Abstract.cs" />
     <Compile Include="Network.ControlProtocol.cs" />
     <Compile Include="Network.cs" />
+    <Compile Include="Network.HiddenServiceHandler.cs" />
     <Compile Include="Network.RouterManagment.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -149,7 +149,9 @@ namespace TORComm.Interface.CommandLine
                 Console.Clear();
                 String ServiceAddress = TORComm.Active.TorProcess.GetHiddenServiceAddress().Split('.')[0];
                 Console.WriteLine("[+] Service address: {0}", ServiceAddress);
-                Console.WriteLine(TORComm.Active.CommandInterface.SendCommand(String.Format("GETINFO hs/service/desc/id/{0}", ServiceAddress)));
+                TORComm.Network.HiddenServiceHandler HSConnector = new Network.HiddenServiceHandler();
+                Console.WriteLine("[+] Attempting to fetch HS descriptor... ");
+                HSConnector.ConnectTo(ServiceAddress);
                 Console.WriteLine("[+] Press any key to continue . . .");
                 Console.ReadKey();
             }

@@ -7,6 +7,8 @@ using System.Threading;
 using System.Net.Sockets;
 using System.Collections;
 using System.Xml.Serialization;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace TORComm.Network.ControlProtocol
 {
@@ -550,15 +552,34 @@ namespace TORComm.Network.ControlProtocol
         public NetworkStatus StatusHandler;
         public CircuitCoordinator CircuitHandler;
 
+        public List<String> CurrentEventSubscriptions;
+
+        public event AsyncMessageReceivedEventHandler NotifyAsyncMessageReceived;
+        public delegate void AsyncMessageReceivedEventHandler(Object sender, Components.Network.AsyncResponseObject e);
+
         private int ControlPort;
         private string ControlPassword;
+        private bool UsingAsyncOperationalMode;
+        private ConcurrentQueue<String> CapturedSyncResponses;
 
         private TcpClient client;
+
+        private String TruncateResponse(Byte[] RxBuffer)
+        {
+            ArrayList TruncateBuffer = new ArrayList();
+            foreach (byte value in RxBuffer)
+            {
+                if (value > 0)
+                {
+                    TruncateBuffer.Add((byte)value);
+                }
+            }
+            return System.Text.Encoding.ASCII.GetString((Byte[])TruncateBuffer.ToArray(typeof(byte))).TrimEnd('\n').TrimEnd('\r');
+        }
 
         private String ReceiveResponse()
         {
             String RetVal = String.Empty;
-            ArrayList TruncateBuffer = new ArrayList();
             int PreviousTimeout = this.client.Client.ReceiveTimeout;
             this.client.Client.ReceiveTimeout = 250;
             try
@@ -569,20 +590,13 @@ namespace TORComm.Network.ControlProtocol
                     {
                         Byte[] RxBuffer = new Byte[40960];
                         this.client.Client.Receive(RxBuffer);
-                        foreach (byte value in RxBuffer)
-                        {
-                            if (value > 0)
-                            {
-                                TruncateBuffer.Add((byte)value);
-                            }
-                        }
+                        RetVal = this.TruncateResponse(RxBuffer);
                     }
                     catch (SocketException)
                     {
                         break;
                     }
                 }
-                RetVal = System.Text.Encoding.ASCII.GetString((Byte[])TruncateBuffer.ToArray(typeof(byte))).TrimEnd('\n').TrimEnd('\r');
             }
             catch (SocketException)
             {
@@ -593,6 +607,96 @@ namespace TORComm.Network.ControlProtocol
                 this.client.Client.ReceiveTimeout = PreviousTimeout;
             }
             return RetVal;
+        }
+
+        private String GetNextSynchronousResponse(int timeout=10)
+        {
+            int TotalCount = 0;
+            String ReturnValue = String.Empty;
+            while(TotalCount * 4 < timeout)
+            {
+                if(this.CapturedSyncResponses.Count > 0)
+                {
+                    bool DequeueSuccess = false;
+                    while(!(DequeueSuccess))
+                    {
+                        DequeueSuccess = this.CapturedSyncResponses.TryDequeue(out ReturnValue);
+                    }
+                    return ReturnValue;
+                }
+                else
+                {
+                    Thread.Sleep(250);
+                    TotalCount++;
+                }
+            }
+            return ReturnValue;
+        }
+
+        private void CaptureSynchronousResponses(Object sender, Components.Network.AsyncResponseObject response)
+        {
+            // Async responses always start with 650
+            if(this.UsingAsyncOperationalMode && (!(this.AsyncResponseOK(response.ProcessedResponse))))
+            {
+                this.CapturedSyncResponses.Enqueue(response.ProcessedResponse);
+            }
+        }
+
+        private void AsyncResponseHandler(IAsyncResult result)
+        {
+            try
+            {
+                TORComm.Components.Network.AsyncResponseObject ResponseObject = (TORComm.Components.Network.AsyncResponseObject)result.AsyncState;
+                ResponseObject.ProcessedResponse = this.TruncateResponse(ResponseObject.RxBuffer);
+                if (this.NotifyAsyncMessageReceived != null)
+                {
+                    this.NotifyAsyncMessageReceived(this, ResponseObject);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Ignore socket exceptions 
+                if(!(ex is SocketException))
+                {
+                    throw;
+                }
+            }
+            finally
+            {
+                if (this.UsingAsyncOperationalMode && this.client.Connected)
+                {
+                    this.AwaitAsyncResponse();
+                }
+            }
+        }
+
+        public String AwaitAsyncResponse(int BufferSize = 40960)
+        {
+            try
+            {
+                if (this.ConnectionReady && this.client.Connected)
+                {
+                    this.UsingAsyncOperationalMode = true;
+                    TORComm.Components.Network.AsyncResponseObject ResponseObject = new Components.Network.AsyncResponseObject(BufferSize);
+                    this.client.Client.BeginReceive(ResponseObject.RxBuffer, 0, ResponseObject.RxBuffer.Length, SocketFlags.None,
+                        new AsyncCallback(AsyncResponseHandler), ResponseObject);
+                    return ResponseObject.CallbackIdentity;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Ignore socket exceptions
+                if(!(ex is SocketException))
+                {
+                    throw;
+                }
+            }
+            return String.Empty;
+        }
+
+        public bool AsyncResponseOK(String response)
+        {
+            return response.StartsWith("650");
         }
 
         public bool ResponseOK(String response)
@@ -609,12 +713,47 @@ namespace TORComm.Network.ControlProtocol
                     command += "\r\n";
                 }
                 this.client.Client.Send(System.Text.Encoding.ASCII.GetBytes(command));
-                return this.ReceiveResponse();
+                if (!(this.UsingAsyncOperationalMode))
+                {
+                    return this.ReceiveResponse();
+                }
+                else
+                {
+                    return this.GetNextSynchronousResponse();
+                }
             }
             else
             {
                 throw new ProtocolViolationException("Client is not connected!");
             }
+        }
+
+        public bool SubscribeToEvents(String[] EventList)
+        {
+            bool SubscribedSuccessfully = true;
+            foreach(String EventName in EventList)
+            {
+                if(!(this.CurrentEventSubscriptions.Contains(EventName)))
+                {
+                    bool ResponseOK = this.ResponseOK(this.SendCommand(String.Format("SETEVENTS {0}", EventName)));
+                    if(ResponseOK)
+                    {
+                        this.CurrentEventSubscriptions.Add(EventName);
+                    }
+                    SubscribedSuccessfully &= ResponseOK;
+                }
+            }
+            /*
+             * Subscribing to events causes TOR to respond asynchronously to those events
+             * Make sure we've made preparations to retain the illusion of synchronous operation
+             */ 
+            if(!(this.UsingAsyncOperationalMode) && SubscribedSuccessfully)
+            {
+                this.NotifyAsyncMessageReceived += this.CaptureSynchronousResponses;
+                this.UsingAsyncOperationalMode = true;
+                this.AwaitAsyncResponse();
+            }
+            return SubscribedSuccessfully;
         }
 
         private void AsyncAssociationHandler(IAsyncResult result)
@@ -656,7 +795,11 @@ namespace TORComm.Network.ControlProtocol
         {
             this.connected = false;
             this.authenticated = false;
+            this.ConnectionReady = false;
+            this.UsingAsyncOperationalMode = false;
             this.client = new TcpClient();
+            this.CurrentEventSubscriptions = new List<string>();
+            this.CapturedSyncResponses = new ConcurrentQueue<string>();
         }
     }
 }

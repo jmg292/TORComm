@@ -215,6 +215,20 @@ namespace TORComm.Components
                 this.Purpose = CircuitPurpose.UNLISTED_UNKNOWN;
             }
         }
+
+        public class AsyncResponseObject
+        {
+            public Byte[] RxBuffer;
+            public String CallbackIdentity;
+            public String ProcessedResponse;
+
+            public AsyncResponseObject(int BufferSize=40960)
+            {
+                this.RxBuffer = new Byte[BufferSize];
+                this.ProcessedResponse = String.Empty;
+                this.CallbackIdentity = Guid.NewGuid().ToString();
+            }
+        }
     }
 
     public static class TorProcess
