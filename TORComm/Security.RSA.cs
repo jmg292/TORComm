@@ -5,6 +5,7 @@ using System.Text;
 using System.Linq;
 using System.Xml.Linq;
 using System.Collections;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 
 namespace TORComm.Security.RSA
@@ -301,6 +302,35 @@ namespace TORComm.Security.RSA
                 }
             }
             return ReturnValue;
+        }
+    }
+
+    public static class CSPKeyConvert
+    {
+        public static Byte[] FromPEMToDER(String PEMEncodedString)
+        {
+            // Clean the -----BEGIN RSA <TYPE> KEY----- and -----END RSA <TYPE> KEY----- lines included in PEM strings
+            List<String> SplitPEMString = PEMEncodedString.Split(new String[] { "\r\n", "\n" }, StringSplitOptions.None).Skip(1).ToList();
+            SplitPEMString.RemoveAt(SplitPEMString.Count - 1);
+            return Convert.FromBase64String(String.Join(String.Empty, SplitPEMString.ToArray()));
+        }
+
+        public static RSACryptoServiceProvider PublicKeyFromDER(Byte[] DERByteArray)
+        {
+            RSACryptoServiceProvider NewKey = new RSACryptoServiceProvider();
+            RSAParameters KeyParams = NewKey.ExportParameters(false);
+            KeyParams.Modulus = DERByteArray;
+            NewKey.ImportParameters(KeyParams);
+            return NewKey;
+        }
+
+        public static RSACryptoServiceProvider PublicKeyFromPEM(String PEMEncodedString)
+        {
+            if(PEMEncodedString.Contains("BEGIN RSA PUBLIC KEY"))
+            {
+                return PublicKeyFromDER(FromPEMToDER(PEMEncodedString));
+            }
+            return null;
         }
     }
 }

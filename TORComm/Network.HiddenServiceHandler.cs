@@ -9,7 +9,7 @@ namespace TORComm.Network
         private int TimeoutCounter;
         private String OnionAddress;
         private Thread TimeoutThread;
-        private bool ResolvedOnionAddress;
+        private bool DescriptorFetchCompleted;
         private static String[] RequiredEventSubscriptions = new String[] { "HS_DESC", "HS_DESC_CONTENT" };
 
         private void SubscribeToEventHandler()
@@ -26,7 +26,7 @@ namespace TORComm.Network
                 this.TimeoutCounter -= 1;
             }
             TORComm.Active.CommandInterface.NotifyAsyncMessageReceived -= this.AsyncResponseHandler;
-            this.ResolvedOnionAddress = true;
+            this.DescriptorFetchCompleted = true;
         }
 
         private void ResetTimeout()
@@ -39,14 +39,12 @@ namespace TORComm.Network
             if (TORComm.Active.CommandInterface.AsyncResponseOK(ResponseObject.ProcessedResponse))
             {
                 bool MessageIsHSDescriptor = false;
-                Console.WriteLine("[+] Async message received.");
                 foreach (String EventCode in RequiredEventSubscriptions)
                 {
                     MessageIsHSDescriptor |= ResponseObject.ProcessedResponse.Contains(EventCode);
                 }
                 if(MessageIsHSDescriptor)
                 {
-                    Console.WriteLine("[+] Hidden service descriptor received, checking content.");
                     if(ResponseObject.ProcessedResponse.Contains(this.OnionAddress))
                     {
                         Console.WriteLine("[+] Descriptor contains requested content: {0}", ResponseObject.ProcessedResponse);
@@ -63,7 +61,7 @@ namespace TORComm.Network
             String CmdResponse = TORComm.Active.CommandInterface.SendCommand(String.Format("HSFETCH {0}", OnionAddress));
             if(TORComm.Active.CommandInterface.ResponseOK(CmdResponse))
             {
-                Console.Write("[+] HSFETCH command sent successfully, awaiting response.");
+                Console.WriteLine("[+] HSFETCH command sent successfully, awaiting response.");
             }
             else
             {
@@ -79,17 +77,18 @@ namespace TORComm.Network
             if (TORComm.Active.CommandInterface.SubscribeToEvents(RequiredEventSubscriptions))
             {
                 this.ResolveOnionAddress();
-                while (!(this.ResolvedOnionAddress))
+                while (!(this.DescriptorFetchCompleted))
                 {
                     Thread.Sleep(500);
                 }
+                Console.WriteLine(TORComm.Active.CommandInterface.SendCommand(String.Format("GETINFO hs/service/desc/id/{0}", this.OnionAddress)));
             }
             return ConnectionSuccessful;
         }
 
         public HiddenServiceHandler()
         {
-            this.ResolvedOnionAddress = false;
+            this.DescriptorFetchCompleted = false;
             this.TimeoutThread = new Thread(new ThreadStart(this.UnsubscribeOnTimeout));    
         }
     }

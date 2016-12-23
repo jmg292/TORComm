@@ -743,8 +743,7 @@ namespace TORComm.Network.ControlProtocol
                     SubscribedSuccessfully &= ResponseOK;
                 }
             }
-            /*
-             * Subscribing to events causes TOR to respond asynchronously to those events
+            /* Subscribing to events causes TOR to respond asynchronously to those events
              * Make sure we've made preparations to retain the illusion of synchronous operation
              */ 
             if(!(this.UsingAsyncOperationalMode) && SubscribedSuccessfully)
@@ -774,7 +773,7 @@ namespace TORComm.Network.ControlProtocol
                 }
                 else
                 {
-                    Console.WriteLine("[!] Unable to establish authentication.");
+                    Console.WriteLine("[!] Unable to authenticate with control port.");
                 }
             }
             else
