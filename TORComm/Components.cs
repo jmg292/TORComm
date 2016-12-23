@@ -216,6 +216,44 @@ namespace TORComm.Components
             }
         }
 
+        public class IntroductionPointObject
+        {
+            public String identity;
+            public RouterObject router;
+            public RSACryptoServiceProvider PublicKey;
+
+            public IntroductionPointObject()
+            {
+                this.router = null;
+                this.PublicKey = null;
+                this.identity = String.Empty;
+            }
+        }
+
+        public class RendezvousDescriptorObject
+        {
+            public String identity;
+            public String SecretIdentity;
+            public int DescriptorVersion;
+            public int[] ProtocolVersions;
+            public DateTime PublicationTime;
+            public RSACryptoServiceProvider ServicePublicKey;
+            public RSACryptoServiceProvider PermanentPublicKey;
+            public IntroductionPointObject[] AdvertisedIntroPoints;
+
+            public RendezvousDescriptorObject()
+            {
+                this.DescriptorVersion = 0;
+                this.identity = String.Empty;
+                this.ProtocolVersions = null;
+                this.ServicePublicKey = null;
+                this.PermanentPublicKey = null;
+                this.AdvertisedIntroPoints = null;
+                this.SecretIdentity = String.Empty;
+                this.PublicationTime = DateTime.MinValue;
+            }
+        }
+
         public class AsyncResponseObject
         {
             public Byte[] RxBuffer;
