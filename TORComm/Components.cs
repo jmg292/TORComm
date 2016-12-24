@@ -38,6 +38,20 @@ namespace TORComm.Components
                 EOT = 0x2404
             }
         }
+
+        public class KeyConversionAssistant
+        {
+            public int index;
+            public String[] SplitMessage;
+            public RSACryptoServiceProvider ConvertedKey;
+
+            public KeyConversionAssistant(int i, String[] s)
+            {
+                this.index = i;
+                this.SplitMessage = s;
+                this.ConvertedKey = null;
+            }
+        }
     }
 
     public static class Network

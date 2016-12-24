@@ -305,6 +305,26 @@ namespace TORComm.Security.RSA
         }
     }
 
+    public static class Extract
+    {
+        public static TORComm.Components.Security.KeyConversionAssistant KeyFromArray(int i, String[] s)
+        {
+            List<String> KeyComponentList = new List<string>();
+            TORComm.Components.Security.KeyConversionAssistant ConversionHelper = new Components.Security.KeyConversionAssistant(i, s);
+            while (!(ConversionHelper.SplitMessage[ConversionHelper.index].Contains("END RSA PUBLIC KEY")))
+            {
+                KeyComponentList.Add(ConversionHelper.SplitMessage[++ConversionHelper.index]);
+            }
+            String KeyString = String.Join("\n", KeyComponentList.ToArray());
+            if (KeyString.Contains("BEGIN RSA PUBLIC KEY") && KeyString.Contains("END RSA PUBLIC KEY"))
+            {
+                ConversionHelper.ConvertedKey = CSPKeyConvert.PublicKeyFromPEM(KeyString);
+            }
+            ConversionHelper.index++;
+            return ConversionHelper;
+        }
+    }
+
     public static class CSPKeyConvert
     {
         public static Byte[] FromPEMToDER(String PEMEncodedString)
@@ -332,5 +352,6 @@ namespace TORComm.Security.RSA
             }
             return null;
         }
+
     }
 }

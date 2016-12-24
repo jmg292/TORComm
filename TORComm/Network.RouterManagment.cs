@@ -15,5 +15,16 @@ namespace TORComm.Network
             TORComm.Components.Network.RouterObject router = QueryResult.Count() > 0 ? QueryResult.FirstOrDefault().Value : null;
             return router;
         }
+
+        public static TORComm.Components.Network.RouterObject GetRouterByAddress(String IPAddress)
+        {
+            var QueryResult = from x in TORComm.Active.RouterStorage.FastRouters where x.Value.address == IPAddress select x;
+            if (!(QueryResult.Any()))
+            {
+                QueryResult = from x in TORComm.Active.RouterStorage.SlowRouters where x.Value.address == IPAddress select x;
+            }
+            TORComm.Components.Network.RouterObject router = QueryResult.Count() > 0 ? QueryResult.FirstOrDefault().Value : null;
+            return router;
+        }
     }
 }
