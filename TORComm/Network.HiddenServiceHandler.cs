@@ -83,7 +83,7 @@ namespace TORComm.Network
                 }
                 else if (DecodedMessage[i].StartsWith("onion-key"))
                 {
-                    TORComm.Components.Security.KeyConversionAssistant ConversionHelper = TORComm.Security.RSA.Extract.KeyFromArray(i, DecodedMessage);
+                    TORComm.Components.Security.KeyConversionAssistant ConversionHelper = TORComm.Security.RSA.Extract.PublicKeyFromStringArray(i, DecodedMessage);
                     if(ConversionHelper.ConvertedKey != null)
                     {
                         CurrentIntroPoint.PublicKey = ConversionHelper.ConvertedKey;
@@ -92,7 +92,7 @@ namespace TORComm.Network
                 }
                 else if (DecodedMessage[i].StartsWith("service-key") && this.RendezvousDescriptor.ServicePublicKey == null)
                 {
-                    TORComm.Components.Security.KeyConversionAssistant ConversionHelper = TORComm.Security.RSA.Extract.KeyFromArray(i, DecodedMessage);
+                    TORComm.Components.Security.KeyConversionAssistant ConversionHelper = TORComm.Security.RSA.Extract.PublicKeyFromStringArray(i, DecodedMessage);
                     if (ConversionHelper.ConvertedKey != null)
                     {
                         this.RendezvousDescriptor.ServicePublicKey = ConversionHelper.ConvertedKey;
@@ -124,7 +124,7 @@ namespace TORComm.Network
                 }
                 else if (NextDescriptorPart.StartsWith("permanent-key"))
                 {
-                    TORComm.Components.Security.KeyConversionAssistant ConversionHelper = TORComm.Security.RSA.Extract.KeyFromArray(i, SplitDescriptor);
+                    TORComm.Components.Security.KeyConversionAssistant ConversionHelper = TORComm.Security.RSA.Extract.PublicKeyFromStringArray(i, SplitDescriptor);
                     if (ConversionHelper.ConvertedKey != null)
                     {
                         this.RendezvousDescriptor.PermanentPublicKey = ConversionHelper.ConvertedKey;

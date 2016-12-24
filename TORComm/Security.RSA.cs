@@ -307,7 +307,7 @@ namespace TORComm.Security.RSA
 
     public static class Extract
     {
-        public static TORComm.Components.Security.KeyConversionAssistant KeyFromArray(int i, String[] s)
+        public static TORComm.Components.Security.KeyConversionAssistant PublicKeyFromStringArray(int i, String[] s)
         {
             List<String> KeyComponentList = new List<string>();
             TORComm.Components.Security.KeyConversionAssistant ConversionHelper = new Components.Security.KeyConversionAssistant(i, s);
