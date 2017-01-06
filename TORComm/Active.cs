@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Net;
+using System.Linq;
 using System.Collections.Concurrent;
 
 namespace TORComm
@@ -7,6 +9,7 @@ namespace TORComm
     public static class Active
     {
         public static String StoragePath;
+        public static IPAddress CurrentAddress;
         public static OperatingSystem.TorProcess TorProcess;
         public static Security.RSA.KeyStorageProvider KeyStore;
         public static Network.TransportProtocol NetworkTransport;
@@ -27,6 +30,7 @@ namespace TORComm
             TORComm.Active.RouterStorage = new Components.Network.RouterStorageObject();
             TORComm.Active.CommandInterface = new Network.ControlProtocol.CommandInterface();
             TORComm.Active.CircuitStorage = new ConcurrentDictionary<String, Components.Network.CircuitObject>();
+            TORComm.Active.CurrentAddress = Dns.GetHostAddresses(Dns.GetHostName()).First(a => a.AddressFamily == AddressFamily.InterNetwork);
         }
     }
 }

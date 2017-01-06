@@ -73,6 +73,9 @@
     <Compile Include="Security.cs" />
     <Compile Include="OperatingSystem.cs" />
     <Compile Include="Security.RSA.cs" />
+    <Compile Include="TestBed.Components.Distributed.cs" />
+    <Compile Include="TestBed.Distributed.Network.cs" />
+    <Compile Include="TestBed.Distributed.Network.Interfaces.cs" />
     <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
