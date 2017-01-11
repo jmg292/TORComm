@@ -1,12 +1,17 @@
 ﻿using System;
-using TORComm.TestBed.Components;
+using System.Collections.Concurrent;
 
 namespace TORComm.TestBed.Distributed.Network
 {
     public class Relay
     {
         public Components.Distributed.NetworkParameters NetworkParameters;
+
+        private Components.Distributed.PeeringTableObject PeeringTable;
         private Components.Distributed.InitialPeeringParameters InitialParameters;
+        
+        private ConcurrentBag<Interfaces.InboundInterface> InboundPeerConnections;
+        private ConcurrentBag<Interfaces.OutboundInterface> OutboundPeerConnections;
 
         private void ConfigureRelayObject(Components.Distributed.InitialPeeringParameters parameters)
         {

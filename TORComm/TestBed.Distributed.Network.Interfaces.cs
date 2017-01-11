@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Net;
+using System.Threading;
 using System.Net.Sockets;
 using System.Collections.Concurrent;
 
@@ -74,8 +76,7 @@ namespace TORComm.TestBed.Distributed.Network.Interfaces
                 }
                 container = new InboundMessageObject(container.client);
             }
-            container.client.client.Client.BeginReceive(container.client.buffer, 0, container.client.buffer.Length, SocketFlags.None,
-                new AsyncCallback(this.ProcessInboundMessage), container);
+            container.ReceiveAsync(new AsyncCallback(this.ProcessInboundMessage));
         }
 
         public void DenyPeeringRequest(InboundConnectionObject client)
@@ -127,6 +128,89 @@ namespace TORComm.TestBed.Distributed.Network.Interfaces
             this.BoundPort = TORComm.Utilities.Network.GetUnusedPort();
             this.AcceptedPeers = new ConcurrentBag<InboundConnectionObject>();
             this.NetworkInterface = new TcpListener(TORComm.Active.CurrentAddress, this.BoundPort);
+        }
+    }
+
+    public class OutboundInterface
+    {
+        private bool active;
+        private int RemotePort;
+        private String RemoteAddress;
+
+        private TcpClient Connection;
+        private ConcurrentQueue<String> OutboundMessageQueue;
+
+        private bool TransmitString(String message)
+        {
+            bool TransmissionSuccessful = false;
+            try
+            {
+                Byte[] OutboundBuffer = System.Text.Encoding.UTF8.GetBytes(message);
+                Connection.Client.Send(OutboundBuffer, SocketFlags.None);
+                TransmissionSuccessful = true;
+            }
+            catch (SocketException)
+            {
+                // Return failure on socket exception
+                TransmissionSuccessful = false;
+            }
+            catch
+            {
+                // Throw anything else higher so we can see it
+                throw;
+            }
+            return TransmissionSuccessful;
+        }
+
+        private void TransmissionThread()
+        {
+            while(active)
+            {
+                if(this.Connection.Client.Connected)
+                {
+                    if(this.OutboundMessageQueue.Count > 0)
+                    {
+                        String message = String.Empty;
+                        bool DequeueSuccessful = false;
+                        while(!(DequeueSuccessful))
+                        {
+                            DequeueSuccessful = this.OutboundMessageQueue.TryDequeue(out message);
+                        }
+                        bool TransmissionSuccessful = TransmitString(message);
+                        if(!(TransmissionSuccessful))
+                        {
+                            // Delay and retry
+                            this.OutboundMessageQueue.Enqueue(message);
+                            Thread.Sleep(500);
+                        }
+                    }
+                    else
+                    {
+                        // Wait for a message
+                        Thread.Sleep(250);
+                    }
+                }
+                else
+                {
+                    // Wait for a connection
+                    Thread.Sleep(250);
+                }
+            }
+        } 
+
+        public void SendMessage(String message)
+        {
+            this.OutboundMessageQueue.Enqueue(message);
+        }
+
+        public bool ConnectTo(PeerAddressObject client)
+        {
+            if(!(String.IsNullOrEmpty(client.NetworkAddress)) && (client.NetworkPort > 0 && client.NetworkPort < 65536))
+            {
+                this.Connection.Connect(client.NetworkAddress, client.NetworkPort);
+                return this.Connection.Connected;
+            }
+            return false;
         }
     }
 }
