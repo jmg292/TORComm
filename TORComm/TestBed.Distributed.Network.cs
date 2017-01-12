@@ -3,6 +3,16 @@ using System.Collections.Concurrent;
 
 namespace TORComm.TestBed.Distributed.Network
 {
+    public static class IdentityHelper
+    {
+        public static TestBed.Components.Distributed.PeerAddressObject GetLocalPeeringIdentity(Relay ParentRelay)
+        {
+            TestBed.Components.Distributed.PeerAddressObject LocalIdentity = new Components.Distributed.PeerAddressObject();
+
+            return LocalIdentity;
+        }
+    }
+
     public class Relay
     {
         public Components.Distributed.NetworkParameters NetworkParameters;
@@ -10,8 +20,8 @@ namespace TORComm.TestBed.Distributed.Network
         private Components.Distributed.PeeringTableObject PeeringTable;
         private Components.Distributed.InitialPeeringParameters InitialParameters;
         
-        private ConcurrentBag<Interfaces.InboundInterface> InboundPeerConnections;
-        private ConcurrentBag<Interfaces.OutboundInterface> OutboundPeerConnections;
+        internal ConcurrentBag<Interfaces.InboundInterface> InboundPeerConnections;
+        internal ConcurrentBag<Interfaces.OutboundInterface> OutboundPeerConnections;
 
         private void ConfigureRelayObject(Components.Distributed.InitialPeeringParameters parameters)
         {

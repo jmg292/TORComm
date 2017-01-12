@@ -96,16 +96,16 @@ namespace TORComm.TestBed.Components.Distributed
         public int NetworkPort;
         public String RelayAddress;
         public String NetworkAddress;
-        public RSACryptoServiceProvider NetworkPublicKey;
-        public RSACryptoServiceProvider SigningPublicKey;
+        public TORComm.Security.RSA.KeyStorageProvider NetworkPublicKey;
+        public TORComm.Security.RSA.KeyStorageProvider SigningPublicKey;
 
         public PeerAddressObject()
         {
             this.NetworkPort = 0;
-            this.NetworkPublicKey = null;
-            this.SigningPublicKey = null;
-            this.NetworkAddress = String.Empty;
             this.RelayAddress = String.Empty;
+            this.NetworkAddress = String.Empty;
+            this.NetworkPublicKey = new Security.RSA.KeyStorageProvider();
+            this.SigningPublicKey = new Security.RSA.KeyStorageProvider();
         }
     }
 
